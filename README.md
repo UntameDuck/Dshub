@@ -1,72 +1,115 @@
-# Getting Started with Create React App
+<p align="center">
+  <a href="#introduction">
+    <img src="./docs/assets/readme-banner.png" alt="DSHUB — Keeping everyday school operations in one place." width="100%" />
+  </a>
+</p>
+<p align="center">
+  <br />
+  <a href="#introduction"><strong>Introduction</strong></a> ·
+  <a href="#architecture"><strong>Architecture</strong></a> ·
+  <a href="#operational-model"><strong>Operational Model</strong></a> ·
+  <a href="#design-lessons"><strong>Design Lessons</strong></a>
+</p>
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+<p align="center">
+  <img alt="React" src="https://img.shields.io/badge/React-Interface-61DAFB?style=flat-square&amp;logo=react&amp;logoColor=111827" />
+  <img alt="Firebase" src="https://img.shields.io/badge/Firebase-Backend-FFCA28?style=flat-square&amp;logo=firebase&amp;logoColor=111827" />
+  <img alt="Campus Operations" src="https://img.shields.io/badge/Campus-Operations-4F46E5?style=flat-square" />
+  <img alt="Maintained Service" src="https://img.shields.io/badge/Service-Deployed-111827?style=flat-square" />
+</p>
 
-## Available Scripts
+## Introduction
 
-In the project directory, you can run:
+DSHUB is a campus operations hub built to replace recurring school workflows that depended on paper, verbal handoffs, and personal messaging. It brought special-room reservations and facility or repair requests into a shared web service that school members could actually use and administrators could maintain.
 
-### `npm start`
+The project demonstrated that digitizing a workflow is not only a matter of building forms. Reservation conflicts, edit ownership, request-state tracking, and administrative history all require explicit data and permission rules once real users begin depending on the service.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Key Features
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+| Feature | Description |
+| --- | --- |
+| Special-room reservations | Centralizes room availability and reservation records to reduce schedule collisions. |
+| Facility and repair requests | Replaces fragmented reports with trackable requests and status updates. |
+| Shared operational view | Gives school members and administrators a common view of ongoing work. |
+| Status-based workflow | Represents each request as an object that moves through explicit operational states. |
+| Administrative handling | Separates ordinary submissions from actions that change or resolve operational records. |
+| Continuous maintenance | Incorporates issues discovered after deployment instead of treating launch as completion. |
 
-### `npm test`
+## Architecture
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+DSHUB operated as a React-based interface backed by Firebase services. The initial implementation prioritized rapid deployment and practical adoption inside the school.
 
-### `npm run build`
+```mermaid
+flowchart LR
+    U[School member] --> UI[React interface]
+    UI --> H[DSHUB service layer]
+    H --> R[Room reservations]
+    H --> F[Facility and repair requests]
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+    R --> FB[(Firebase backend)]
+    F --> FB
+    FB --> S[Status and ownership data]
+    FB --> A[Administrative handling history]
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Operational Model
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Different workflows protect different assets and therefore need different rules.
 
-### `npm run eject`
+| Workflow | Core data requirement | Core permission question |
+| --- | --- | --- |
+| Room reservation | Time slot, room, owner, and current state | Who may create, change, or cancel this reservation? |
+| Facility or repair request | Request details, processing state, and handling history | Who may view, update, or resolve the request? |
+| Administrative action | Actor, target object, transition, and timestamp | Is the current user allowed to perform this transition? |
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+This object-and-state view became more reliable than designing permissions around individual screens. A hidden button can improve usability, but it cannot serve as the final authorization boundary.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Design Lessons
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### From Fast Deployment to Explicit Trust Boundaries
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+The early DSHUB implementation used broad Firestore read and write rules to move quickly. Operation with real users exposed the weakness of assuming that client-side restrictions were sufficient. A modified client could bypass the interface unless the backend independently enforced ownership, role, and state rules.
 
-## Learn More
+This limitation became a concrete design input for later systems: role resolution should live in server-side functions, object access should be enforced at the data layer, and sensitive administrative actions should be separately restricted and recorded.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Development Continues After Deployment
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+DSHUB established an operating cycle in which problems found during use returned to the design process.
 
-### Code Splitting
+```text
+Observe the live workflow
+  → reproduce the failure or ambiguity
+  → clarify data ownership and state transitions
+  → apply a focused change
+  → verify both normal and unauthorized paths
+  → document the operational reason
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Transferable Security Baseline
 
-### Analyzing the Bundle Size
+The project's operational lessons informed the stricter architecture later applied to Student Voice: server-side role checks, object-level data policies, explicit state validation, limited sensitive functions, and auditable administrative actions.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Operational Evidence
 
-### Making a Progressive Web App
+| Area | What operation revealed | Resulting engineering principle |
+| --- | --- | --- |
+| Reservations | Schedule collisions and edit ownership matter after multiple users participate. | Validate conflicts and ownership at the authoritative backend. |
+| Facility requests | Submission alone is insufficient without status and handling history. | Model state transitions and administrative responsibility explicitly. |
+| Client-side controls | Hidden or disabled controls can be bypassed. | Treat the server and data layer as the trust boundary. |
+| Maintenance | User behavior and school procedures continue to change after launch. | Include regression and operational-state checks in each change cycle. |
+| Handover | Future maintainers need to understand why restrictions exist. | Preserve decisions in data contracts, code structure, and migration history. |
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Technical Scope
 
-### Advanced Configuration
+- Interface: React-based web UI.
+- Backend: Firebase-family services used for the deployed campus hub.
+- Operational domains: special-room reservations and facility or repair requests.
+- The initial broad Firestore rules are documented as an architectural limitation and a source of later security improvements, not presented as a finished security model.
+- This README is based on the implementation and operational lessons recorded in the project portfolio. Reproducible setup instructions can be added when repository configuration and deployment details are available.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+---
 
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
-
-# DSHUB
+<p align="center">
+  <strong>DSHUB</strong><br />
+  <sub>Keeping everyday school operations in one place.</sub>
+</p>
